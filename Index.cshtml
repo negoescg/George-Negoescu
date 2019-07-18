@@ -1,0 +1,910 @@
+﻿﻿@model IEnumerable<ACS_Manager.Models.AcsUser>
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>ACS Users</h2>
+
+<div class="dx-datagrid">
+    <button id="gridClearSelection" class="dx-button"></button>
+    <button id="addButton" class="dx-button"></button>
+    <button id="cloneButton" class="dx-button"></button>
+    <div id="gridContainer"></div>
+    <button id="roleDeleteAll" class="dx-button"></button>
+    <button id="addRole" class="dx-button"></button>
+    <div id="dropBoxUsers" class="dx-selectbox"></div>
+    <button id="copyRole" class="dx-button"></button>
+    <div id="userRoles"></div>
+</div>
+
+<style>
+    #gridContainer {
+        margin-bottom: 22px;
+        margin-top: 20px;
+    }
+    #userRoles {
+        margin-bottom: 22px;
+        margin-top: 20px;
+    }
+    #dropBoxUsers {
+        width: 250px;
+        height: 36px;
+        display: inline-block;
+        vertical-align: middle;
+    }
+</style>
+<script type="text/javascript">
+    var getUsers = [];
+    var usersUpdate = [];
+    var userStatuses = [{ "UserStatus": 1, "Description": "Active" }, { "UserStatus": 0, "Description": "Disabled" }];
+    var updatedData = [];
+    var userRoles = [];
+    var oldUserRole = [];
+    var selectedRoles = [];
+    var selectedName = null;
+    var selectedUserId = null;
+    var selectedUser = null;
+    var userPermission = [];
+
+    $.ajax({
+        url: '/users/getusers',
+        type: "GET",
+        datatype: "JSON",
+        contentType: false,
+        processData: false,
+        async: false,
+        success: function (result) {
+            getUsers = result;
+        }
+    });
+
+    $.ajax({
+        url: '/users/CheckUserRole',
+        type: "GET",
+        datatype: "JSON",
+        contentType: false,
+        processData: false,
+        async: false,
+        success: function (result) {
+            userPermission = result;
+        }
+    });
+
+    var acsRoles = {
+        store: new DevExpress.data.CustomStore({
+            key: 'RoleID',
+            loadMode: 'raw',
+            load: function (loadOptions) {
+                return $.getJSON('/users/getroles');
+            },
+        }),
+    };
+    var acsDatabases = []
+    $.ajax({
+        url: '/users/GetDatabases',
+        type: "GET",
+        datatype: "JSON",
+        contentType: false,
+        processData: false,
+        async: false,
+        success: function (result) {
+            acsDatabases = result;
+        }
+    });
+    var acsSystems = {
+        store: new DevExpress.data.CustomStore({
+            key: 'SystemID',
+            loadMode: 'raw',
+            load: function (loadOptions) {
+                return $.getJSON('/users/getsystems');
+            },
+        }),
+    };
+    var acsOrganisations = {
+        store: new DevExpress.data.CustomStore({
+            key: 'OrganisationID',
+            loadMode: 'raw',
+            load: function (loadOptions) {
+                return $.getJSON('/users/getorganisations');
+            },
+        }),
+    };
+    var acsDepartments = [];
+
+    $.ajax({
+        url: '/users/GetDepartments',
+        type: "GET",
+        datatype: "JSON",
+        contentType: false,
+        processData: false,
+        async: false,
+        success: function (result) {
+            acsDepartments = result;
+        }
+    });
+    var userDropBox = $("#dropBoxUsers").dxSelectBox({
+        dataSource: new DevExpress.data.ArrayStore({
+            data: getUsers,
+            key: "UserID"
+        }),
+        searchEnabled: true,
+        placeholder: "Select User To Add Role(s)...",
+        displayExpr: "Name",
+        showClearButton: true,
+        valueExpr: "UserID",
+        onSelectionChanged: function (e) {
+            if (e.selectedItem != null) {
+                $("#copyRole").show();
+                selectedName = e.selectedItem.Name;
+                selectedUserId = e.selectedItem.UserID;
+            }
+            else {
+                $("#copyRole").hide();
+            }
+        }
+    }).dxSelectBox("instance");
+    if (!userPermission.IsAdmin) {
+        $("#cloneButton").hide();
+        $("#addButton").hide();
+    }
+    $("#userRoles").hide();
+    $("#dropBoxUsers").hide();
+    $("#addRole").hide();
+    $("#copyRole").hide();
+    $("#roleDeleteAll").hide();
+
+    $(document).ready(function () {
+        var usersGrid = $("#gridContainer").dxDataGrid({
+            dataSource: getUsers,
+            allowColumnResizing: true,
+            loadPanel: {
+                enabled: true
+            },
+            filterRow: {
+                visible: true,
+                applyFilter: "auto"
+            },
+            editing: {
+                mode: "popup",
+                allowUpdating: function (e) {
+                    return userPermission.IsAdmin || userPermission.UserID === e.row.data.UserID;
+                },
+                //allowDeleting: true,
+                useIcons: true,
+                //allowAdding: true,
+                popup: {
+                    title: "Employee Info",
+                    showTitle: true,
+                    width: 1000,
+                    height: 600,
+                    position: {
+                        my: "center",
+                        at: "center",
+                        of: window
+                    }
+                },
+                form: {
+                    items: [{
+                        itemType: "group",
+                        colCount: 2,
+                        colSpan: 2,
+                        items: [
+                            {
+                                dataField: "Name",
+                                validationRules: [{ type: "required", message: "This field is required" }],
+                                visibleIndex: 1
+                            },
+                            {
+                                dataField: "WindowsUserName",
+                                validationRules: [{ type: "required", message: "This field is required" }],
+                                visibleIndex: 2
+                            },
+                            {
+                                dataField: "Email",
+                                validationRules: [{ type: "email", message: "Enter valid email" }, { type: "required", message: "This field is required" }],
+                                visibleIndex: 3
+                            },
+                            {
+                                dataField: "Telephone",
+                                visibleIndex: 4
+                            },
+                            {
+                                dataField: "OrganisationID",
+                                validationRules: [{ type: "required", message: "This field is required" }],
+                                visibleIndex: 5
+                            },
+                            {
+                                dataField: "DepartmentID",
+                                validationRules: [{ type: "required", message: "This field is required" }],
+                                visibleIndex: 6
+                            },
+                            {
+                                dataField: "UserStatus",
+                                validationRules: [{ type: "required", message: "This field is required" }],
+                                visibleIndex: 7
+                            }
+                        ]
+                    },
+                    {
+                        itemType: "group",
+                        colCount: 2,
+                        colSpan: 2,
+                        caption: "Create/Change Password",
+                        items: [
+                            {
+                                dataField: "NewPassword",
+                                editorOptions: {
+                                    mode: 'password',
+                                },
+                                visibleIndex: 8
+                            },
+                            {
+                                dataField: "ConfirmPassword",
+                                editorType: "dxTextBox",
+                                editorOptions: {
+                                    mode: "password"
+                                },
+                                validationRules: [{
+                                    type: "custom",
+                                    reevaluate: true,
+                                    validationCallback: passwordValidation
+                                }],
+                                visibleIndex: 9
+                            }
+                        ]
+                    }]
+                }
+            },
+            onEditingStart: function (e) {
+                if (e.data.NewPassword !== null) {
+                    e.data.NewPassword = "";
+                    e.data.ConfirmPassword = "";
+                }
+            },
+            onEditorPreparing: function (e) {
+                if (!userPermission.IsAdmin) {
+                    if (e.parentType === "dataRow" && e.dataField === "WindowsUserName") {
+                        e.editorOptions.readOnly = true;
+                    }
+                    if (e.parentType === "dataRow" && e.dataField === "Name") {
+                        e.editorOptions.readOnly = true;
+                    }
+                    if (e.parentType === "dataRow" && e.dataField === "Email") {
+                        e.editorOptions.readOnly = true;
+                    }
+                    if (e.parentType === "dataRow" && e.dataField === "Telephone") {
+                        e.editorOptions.readOnly = true;
+                    }
+                    if (e.parentType === "dataRow" && e.dataField === "OrganisationID") {
+                        e.editorOptions.readOnly = true;
+                    }
+                    if (e.parentType === "dataRow" && e.dataField === "DepartmentID") {
+                        e.editorOptions.readOnly = true;
+                    }
+                    if (e.parentType === "dataRow" && e.dataField === "UserStatus") {
+                        e.editorOptions.readOnly = true;
+                    }
+                }
+            },
+            onInitNewRow: function (e) {
+                var data = $('#gridContainer').dxDataGrid("instance").getSelectedRowsData();
+                if ($.isArray(data) && data.length !== 0) {
+                    //e.data.WindowsUserName = data[0].WindowsUserName;
+                    //e.data.Name = data[0].Name;
+                    //e.data.Email = data[0].Email;
+                    e.data.OrganisationID = data[0].OrganisationID;
+                    e.data.DepartmentID = data[0].DepartmentID;
+                    //e.data.Telephone = data[0].Telephone;
+                    e.data.UserStatus = 1;
+                    userRoles = [];
+                    $.ajax({
+                        url: '/users/getuserroles?userId=' + data[0].UserID,
+                        type: "GET",
+                        datatype: "JSON",
+                        contentType: false,
+                        processData: false,
+                        async: false,
+                        success: function (result) {
+                            userRoles = result;
+                        }
+                    });
+                }
+            },
+            onRowValidating: function (e) {
+                if (e.isValid) {
+                    e.isValid = false;
+                    if (typeof e.oldData === 'undefined') {
+                        if (e.newData.UserStatus === 1 && typeof e.newData.NewPassword === 'undefined') {
+                            e.errorText = "Please create a password";
+                        }
+                        else if (e.newData.NewPassword !== e.newData.ConfirmPassword && e.newData.UserStatus === 1) {
+                            e.errorText = "Passwords do not match";
+                        }
+                        else {
+                            e.isValid = true;
+                        }
+                    }
+                    else {
+                        if (e.oldData.UserStatus === 0 && e.newData.UserStatus === 1 && (typeof e.newData.NewPassword === 'undefined')) {
+                            e.errorText = "Please create a password";
+                        }
+                        else if (e.newData.NewPassword !== e.newData.ConfirmPassword && e.newData.UserStatus === 1) {
+                            e.errorText = "Passwords do not match";
+                        }
+                        else {
+                            e.isValid = true;
+                        }
+                    }
+                }
+            },
+
+            paging: {
+                pageSize: 10
+            },
+            pager: {
+                showPageSizeSelector: true,
+                allowedPageSizes: [10, 20, 50],
+                showInfo: true
+            },
+
+            selection: {
+                mode: "single",
+                //allowSelectAll: true,
+                //showCheckBoxesMode: 'always'
+            },
+            columns: [
+                {
+                    dataField: 'Name',
+                    caption: 'Name',
+                    alignment: 'center'
+
+                },
+                {
+                    dataField: 'WindowsUserName',
+                    caption: 'Username',
+                    alignment: 'center'
+
+                },
+                {
+                    dataField: 'Email',
+                    caption: 'Email',
+                    alignment: 'center'
+                },
+                {
+                    dataField: 'Telephone',
+                    caption: 'Telephone',
+                    alignment: 'center'
+                },
+                {
+                    dataField: "OrganisationID",
+                    caption: "Organisation",
+                    setCellValue: function (rowData, value) {
+                        rowData.OrganisationID = value;
+                        rowData.DepartmentID = null;
+                    },
+                    lookup: {
+                        dataSource: acsOrganisations,
+                        valueExpr: "OrganisationID",
+                        displayExpr: "OrgName"
+                    }
+                },
+                {
+                    dataField: "DepartmentID",
+                    caption: "Department",
+                    alignment: 'center',
+                    lookup: {
+                        dataSource: function (options) {
+                            return {
+                                store: acsDepartments,
+                                filter: options.data ? ["OrganisationID", "=", options.data.OrganisationID] : null
+                            };
+                        },
+                        valueExpr: "DepartmentID",
+                        displayExpr: "Name"
+                    }
+                },
+                {
+                    dataField: 'UserStatus',
+                    caption: 'Status',
+                    alignment: 'center',
+                    lookup: {
+                        dataSource: userStatuses,
+                        displayExpr: 'Description',
+                        valueExpr: 'UserStatus'
+                    }
+                },
+                {
+                    dataField: 'NewPassword',
+                    caption: 'New Password',
+                    alignment: 'center',
+                    visible: false
+                },
+                {
+                    dataField: 'ConfirmPassword',
+                    caption: 'Confirm Password',
+                    alignment: 'center',
+                    visible: false
+                }
+            ],
+            showBorders: true,
+            onRowUpdated: function (e) {
+                $.ajax({
+                    type: "POST",
+                    url: "/users/UpdateUsers",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: "json",
+                    traditional: true,
+                    data: JSON.stringify(e.data)
+                }).done(function (result) {
+                    DevExpress.ui.notify({
+                        message: "Record Updated",
+                        position: {
+                            my: "center top",
+                            at: "center top"
+                        }
+                    }, "success", 2000);
+
+                });
+            },
+            onRowInserted: function (e) {
+                var userRoles = [];
+                if (usersUpdate.length !== 0) {
+                    $.ajax({
+                        url: '/users/getuserroles?userId=' + usersUpdate[0].UserID,
+                        type: "GET",
+                        datatype: "JSON",
+                        contentType: false,
+                        processData: false,
+                        async: false,
+                        success: function (result) {
+                            userRoles = result;
+                        }
+                    })
+                }
+                $.ajax({
+                    type: "POST",
+                    url: "/users/AddNewUser",
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: "json",
+                    traditional: true,
+                    data: JSON.stringify(e.data)
+                }).done(function (result) {
+                    DevExpress.ui.notify({
+                        message: "New User Added",
+                        position: {
+                            my: "center top",
+                            at: "center top"
+                        }
+                    }, "success", 2000);
+                    getUsers = [];
+                    $.ajax({
+                        url: '/users/getusers',
+                        type: "GET",
+                        datatype: "JSON",
+                        contentType: false,
+                        processData: false,
+                        async: false,
+                        success: function (result) {
+                            getUsers = result;
+                            usersGrid.option("dataSource", getUsers);
+                            usersGrid.refresh();
+                        }
+                    });
+                    $("#gridContainer").dxDataGrid("instance").refresh();
+                    if (usersUpdate.length !== 0 && userRoles !== 0) {
+                        var userId = getUsers[getUsers.length - 1].UserID;
+                        for (var i = 0; i < userRoles.length; i++) {
+                            userRoles[i].UserID = userId;
+                        }
+                        $.ajax({
+                            type: "POST",
+                            url: "/users/CloneUserRoles",
+                            contentType: 'application/json; charset=utf-8',
+                            dataType: "json",
+                            traditional: true,
+                            data: JSON.stringify(userRoles)
+                        }).done(function (result) { });
+                    }
+                });
+            },
+            onSelectionChanged: function (selectedItems) {
+                var dataRow = selectedItems.selectedRowsData;
+
+                if (dataRow.length == 1) {
+
+                    selectedUser = dataRow[0].Name;
+                    usersUpdate = dataRow;
+
+                    if ($("#userRoles").is(":hidden")) {
+                        $("#userRoles").show();
+                    }
+
+                    if (userPermission.IsAdmin) {
+
+                        $("#addRole").show();
+                        $("#roleDeleteAll").show();
+                    }
+                    clearButton.option("disabled", !dataRow.length);
+                    duplicateButton.option("disabled", !dataRow.length);
+                    addButton.option("disabled", true);
+
+                    $(function () {
+                        var userID = dataRow[0].UserID;
+
+                        userRoles = [];
+                        $.ajax({
+                            url: '/users/getuserroles?userId=' + userID,
+                            type: "GET",
+                            datatype: "JSON",
+                            contentType: false,
+                            processData: false,
+                            async: false,
+                            success: function (result) {
+                                userRoles = result;
+                            }
+                        });
+                        if (userRoles.length === 0) {
+                            deleteRoles.option("disabled", true);
+                        }
+                        else {
+                            deleteRoles.option("disabled", false);
+                        }
+                        $("#userRoles").dxDataGrid({
+                            allowColumnResizing: true,
+                            dataSource: userRoles,
+                            allowColumnResizing: true,
+                            loadPanel: {
+                                enabled: true
+                            },
+                            filterRow: {
+                                visible: true,
+                                applyFilter: "auto"
+                            },
+                            selection: {
+                                mode: "multiple",
+                                allowSelectAll: true,
+                                showCheckBoxesMode: 'always'
+                            },
+                            showBorders: true,
+                            editing: {
+                                mode: "popup",
+                                allowUpdating: function (e) {
+                                    return userPermission.IsAdmin;
+                                },
+                                allowDeleting: function (e) {
+                                    return userPermission.IsAdmin;
+                                },
+                                //allowAdding: true,
+                                useIcons: true,
+                                popup: {
+                                    title: "Employee Roles",
+                                    showTitle: true,
+                                    width: 1000,
+                                    height: 600,
+                                    position: {
+                                        my: "center",
+                                        at: "center",
+                                        of: window
+                                    }
+                                },
+                                form: {
+                                    items: [
+                                        {
+                                            dataField: "SystemID",
+                                            validationRules: [{ type: "required", message: "This field is required" }],
+                                            visibleIndex: 1
+                                        },
+                                        {
+                                            dataField: "DatabaseID",
+                                            validationRules: [{ type: "required", message: "This field is required" }],
+                                            visibleIndex: 1
+                                        },
+                                        {
+                                            dataField: "RoleID",
+                                            validationRules: [{ type: "required", message: "This field is required" }],
+                                            visibleIndex: 1
+                                        }
+                                    ]
+                                }
+                            },
+                            paging: {
+                                pageSize: 10
+                            },
+                            pager: {
+                                showPageSizeSelector: true,
+                                allowedPageSizes: [10, 20, 50],
+                                showInfo: true
+                            },
+                            columns: [
+                                {
+                                    dataField: "SystemID",
+                                    caption: "System",
+                                    setCellValue: function (rowData, value) {
+                                        rowData.SystemID = value;
+                                        rowData.DatabaseID = null;
+                                    },
+                                    lookup: {
+                                        dataSource: acsSystems,
+                                        valueExpr: "SystemID",
+                                        displayExpr: "Description"
+                                    }
+                                },
+                                {
+                                    dataField: "DatabaseID",
+                                    caption: "Database",
+                                    alignment: 'center',
+                                    lookup: {
+                                        dataSource: function (options) {
+                                            return {
+                                                store: acsDatabases,
+                                                filter: options.data ? ["SystemID", "=", options.data.SystemID] : null
+                                            };
+                                        },
+                                        valueExpr: "DatabaseID",
+                                        displayExpr: "Description"
+                                    }
+                                },
+                                {
+                                    dataField: 'RoleID',
+                                    caption: 'Role',
+                                    alignment: 'center',
+                                    lookup: {
+                                        dataSource: acsRoles,
+                                        displayExpr: 'RoleCode',
+                                        valueExpr: 'RoleID'
+                                    }
+                                },
+                                {
+                                    dataField: 'RoleID',
+                                    caption: 'Description',
+                                    alignment: 'center',
+                                    lookup: {
+                                        dataSource: acsRoles,
+                                        displayExpr: 'Description',
+                                        valueExpr: 'RoleID'
+                                    }
+                                }
+                            ],
+                            onSelectionChanged: function (selectedRows) {
+                                var dataRow = selectedRows.selectedRowsData;
+                                if (dataRow.length !== 0) {
+                                    if (userPermission.IsAdmin) {
+                                        $("#dropBoxUsers").show();
+                                    }
+                                    selectedRoles = [];
+                                    for (var i = 0; i < dataRow.length; i++) {
+                                        var role = { "SystemID": dataRow[i].SystemID, "DatabaseID": dataRow[i].DatabaseID, "UserID": dataRow[i].UserID, "RoleID": dataRow[i].RoleID };
+                                        selectedRoles.push(role);
+                                    }
+                                }
+                                else {
+                                    $("#dropBoxUsers").hide();
+                                    $("#copyRole").hide();
+                                    userDropBox.reset();
+                                }
+                            },
+                            onRowRemoved: function (e) {
+                                $.ajax({
+                                    type: "POST",
+                                    url: "/users/DeleteUserRole",
+                                    contentType: 'application/json; charset=utf-8',
+                                    dataType: "json",
+                                    traditional: true,
+                                    data: JSON.stringify(e.data)
+                                }).done(function (e) {
+                                    DevExpress.ui.notify({
+                                        message: "Role Deleted",
+                                        position: {
+                                            my: "center top",
+                                            at: "center top"
+                                        }
+                                    }, "success", 2000);
+
+                                });
+                            },
+                            onRowUpdating: function (e) {
+                                e.newData.SystemID = e.newData.SystemID || e.oldData.SystemID;
+                                e.newData.DatabaseID = e.newData.DatabaseID || e.oldData.DatabaseID;
+                                e.newData.UserID = e.newData.UserID || e.oldData.UserID;
+                                e.newData.RoleID = e.newData.RoleID || e.oldData.RoleID;
+                                oldUserRole = [{ "SystemID": e.oldData.SystemID, "DatabaseID": e.oldData.DatabaseID, "UserID": e.oldData.UserID, "RoleID": e.oldData.RoleID }, { "SystemID": e.newData.SystemID, "DatabaseID": e.newData.DatabaseID, "UserID": e.newData.UserID, "RoleID": e.newData.RoleID }];
+                            },
+                            onRowUpdated: function (e) {
+                                $.ajax({
+                                    type: "POST",
+                                    url: "/users/UpdateUserRole",
+                                    contentType: 'application/json; charset=utf-8',
+                                    dataType: "json",
+                                    traditional: true,
+                                    data: JSON.stringify(oldUserRole)
+                                }).done(function (result) {
+                                    DevExpress.ui.notify({
+                                        message: "User Role Updated",
+                                        position: {
+                                            my: "center top",
+                                            at: "center top"
+                                        }
+                                    }, "success", 2000);
+
+                                });
+                            },
+                            onRowInserted: function (e) {
+                                e.data.userID = userID;
+                                $.ajax({
+                                    type: "POST",
+                                    url: "/users/AddNewUserRole",
+                                    contentType: 'application/json; charset=utf-8',
+                                    dataType: "json",
+                                    traditional: true,
+                                    data: JSON.stringify(e.data)
+                                }).done(function (result) {
+                                    DevExpress.ui.notify({
+                                        message: "New User Role Added",
+                                        position: {
+                                            my: "center top",
+                                            at: "center top"
+                                        }
+                                    }, "success", 2000);
+
+                                });
+                            }
+
+                        }).dxDataGrid('instance');
+
+                        $("#userRoles").dxDataGrid('instance').clearSelection();
+                    });
+                }
+
+                else {
+
+                    $("#userRoles").hide();
+                    $("#dropBoxUsers").hide();
+                    $("#addRole").hide();
+                    $("#roleDeleteAll").hide();
+                    clearButton.option("disabled", !dataRow.length);
+                    duplicateButton.option("disabled", !dataRow.length);
+                }
+            }
+
+        }).dxDataGrid('instance');
+
+
+        var clearButton = $("#gridClearSelection").dxButton({
+
+            text: "Clear Selection",
+
+            disabled: true,
+
+            onClick: function () {
+
+                usersGrid.clearSelection();
+                addButton.option("disabled", false);
+            }
+
+        }).dxButton("instance");
+
+        var duplicateButton = $("#cloneButton").dxButton({
+
+            text: "Clone Record",
+
+            disabled: true,
+
+            onClick: function () {
+
+                $('#gridContainer').dxDataGrid("instance").addRow();
+            }
+
+        }).dxButton("instance");
+
+        var addButton = $("#addButton").dxButton({
+
+            text: "Add New User",
+
+            disabled: false,
+
+            onClick: function () {
+
+                $('#gridContainer').dxDataGrid("instance").addRow();
+            }
+
+        }).dxButton("instance");
+        var addRole = $("#addRole").dxButton({
+
+            text: "Add New Role",
+
+            disabled: false,
+
+            onClick: function () {
+
+                $('#userRoles').dxDataGrid("instance").addRow();
+            }
+
+        }).dxButton("instance");
+        var deleteRoles = $("#roleDeleteAll").dxButton({
+
+            text: "Delete All Roles",
+
+            disabled: false,
+
+            onClick: function () {
+
+                var result = DevExpress.ui.dialog.confirm("<i>Delete All Roles for " + selectedUser + "</i>", "Are you sure?");
+                result.done(function (dialogResult) {
+                    if (dialogResult) {
+                        var userID = userRoles[0].UserID;
+                        $.ajax({
+                            type: "POST",
+                            url: "/users/DeleteUserRoles",
+                            contentType: 'application/json; charset=utf-8',
+                            dataType: "json",
+                            traditional: true,
+                            data: JSON.stringify(userRoles)
+                        }).done(function (e) {
+                            DevExpress.ui.notify({
+                                message: "Role Deleted",
+                                position: {
+                                    my: "center top",
+                                    at: "center top"
+                                }
+                            }, "success", 2000);
+                            userRoles = [];
+                            $.ajax({
+                                url: '/users/getuserroles?userId=' + userID,
+                                type: "GET",
+                                datatype: "JSON",
+                                contentType: false,
+                                processData: false,
+                                async: false,
+                                success: function (result) {
+                                    userRoles = result;
+                                    $("#userRoles").dxDataGrid('instance').option("dataSource", userRoles);
+                                }
+                            });
+                        });
+                    }
+                });
+            }
+
+        }).dxButton("instance");
+
+        var copyRole = $("#copyRole").dxButton({
+
+            text: "Add Selected Role(s)",
+
+            disabled: false,
+
+            onClick: function () {
+                var result = DevExpress.ui.dialog.confirm("<i>Add Selected Role(s) to " + selectedName + "</i>", "Are you sure?");
+                result.done(function (dialogResult) {
+                    if (dialogResult) {
+                        var copyToUser = { "SystemID": selectedUserId, "DatabaseID": selectedUserId, "UserID": selectedUserId, "RoleID": selectedUserId };
+                        selectedRoles.push(copyToUser);
+                        $.ajax({
+                            type: "POST",
+                            url: "/users/AddRolesToSelectedUser",
+                            contentType: 'application/json; charset=utf-8',
+                            dataType: "json",
+                            traditional: true,
+                            data: JSON.stringify(selectedRoles)
+                        }).done(function (result) {
+                            DevExpress.ui.notify({
+                                message: "Roles added to " + selectedName,
+                                position: {
+                                    my: "center top",
+                                    at: "center top"
+                                }
+                            }, "success", 2000);
+
+                        });
+                    }
+                });
+            }
+
+        }).dxButton("instance");
+
+        function passwordValidation(e) {
+            return true;
+        }
+    });
+</script>

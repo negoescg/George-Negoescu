@@ -1,0 +1,198 @@
+﻿@model ACS_Manager.Models.User
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+@*<html>
+    <head>
+        <link href="https://fonts.googleapis.com/css?family=Ubuntu" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Sign in</title>
+    </head>
+    <body>
+        <div class="main">
+
+            @using (Html.BeginForm("Login", "Authentication", FormMethod.Post, new { @class = "form1" }))
+            {
+                <p class="sign" align="center">Sign in</p>
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(s => s.ReturnURL)
+
+                if (TempData["ErrorMSG"] != null)
+                {
+                    <p class="error" align="center"> @TempData["ErrorMSG"] </p>
+                }
+
+                @Html.TextBoxFor(s => s.WindowsUserName, new { @placeholder = "Username", @class = "un" })
+
+                @Html.PasswordFor(s => s.Password, new { @placeholder = "Password", @class = "pass" })
+
+                <button type="submit" class="submit">Login</button>
+
+            }
+        </div>
+    </body>
+    </html>
+    <style>
+        body {
+            background-color: #f5fdff;
+            font-family: 'Ubuntu', sans-serif;
+        }
+
+        .main {
+            background-color: #FFFFFF;
+            width: 400px;
+            height: auto;
+            margin: 7em auto;
+            border-radius: 1.5em;
+            box-shadow: 0px 11px 35px 2px rgba(0, 0, 0, 0.14);
+        }
+
+        .sign {
+            padding-top: 0px;
+            color: #002d5d;
+            font-family: 'Ubuntu', sans-serif;
+            font-weight: bold;
+            font-size: 23px;
+            padding-bottom:0px;
+        }
+        .error {
+            color: #002d5d;
+            font-family: 'Ubuntu', sans-serif;
+            font-weight: normal;
+            font-size: 15px;
+        }
+
+        .un {
+        width: 76%;
+        color: rgb(38, 50, 56);
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 1px;
+        background: rgba(136, 126, 126, 0.04);
+        padding: 10px 20px;
+        border: none;
+        border-radius: 20px;
+        outline: none;
+        box-sizing: border-box;
+        border: 2px solid rgba(0, 0, 0, 0.02);
+        margin-left: 46px;
+        text-align: center;
+        margin-bottom: 27px;
+        font-family: 'Ubuntu', sans-serif;
+        }
+
+        form.form1 {
+            padding-top: 40px;
+        }
+
+        .pass {
+        width: 76%;
+        color: rgb(38, 50, 56);
+        font-weight: 700;
+        font-size: 14px;
+        letter-spacing: 1px;
+        background: rgba(136, 126, 126, 0.04);
+        padding: 10px 20px;
+        border: none;
+        border-radius: 20px;
+        outline: none;
+        box-sizing: border-box;
+        border: 2px solid rgba(0, 0, 0, 0.02);
+        margin-bottom: 2px;
+        margin-left: 46px;
+        text-align: center;
+        font-family: 'Ubuntu', sans-serif;
+        }
+
+
+        .un:focus, .pass:focus {
+            border: 2px solid rgba(0, 0, 0, 0.18) !important;
+
+        }
+
+        .submit {
+          cursor: pointer;
+            border-radius: 5em;
+            color: #fff;
+            background: linear-gradient(to right, #002d5d, #13d0ca);
+            border: 0;
+            padding-left: 40px;
+            padding-right: 40px;
+            padding-bottom: 10px;
+            padding-top: 10px;
+            font-family: 'Ubuntu', sans-serif;
+            margin-left: 35%;
+            margin-top:27px;
+            margin-bottom:50px;
+            font-size: 13px;
+            box-shadow: 0 0 20px 1px rgba(0, 0, 0, 0.04);
+        }
+
+
+        button {
+            text-shadow: 0px 0px 3px rgba(117, 117, 117, 0.12);
+            color: #E1BEE7;
+            text-decoration: none;
+        }
+
+    </style>*@
+
+
+
+
+<html>
+<head>
+    <title>ACS Manager Sign in</title>
+
+    <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.1/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.0/js/bootstrap.min.js" integrity="sha384-7aThvCh9TypR7fIc2HV4O/nFMVCBwyIUKL8XCtKE+8xgCgl/PQGuFsvShjr74PBp" crossorigin="anonymous"></script>
+    <link rel="stylesheet" type="text/css" href="~/Content/login.css" />
+
+</head>
+<body class="pt-0">
+    <div class="container">
+        @using (Html.BeginForm("Login", "Authentication", FormMethod.Post, new { @class = "m-0" }))
+        {
+            <div class="mt-3 col-12 col-lg-6 offset-lg-3">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="text-center">
+                            <img src="https://www.goinspire.co.uk/images/headers/download.png" style="width: 375px" class="mt-2 mb-4" />
+                        </div>
+                    </div>
+                    <div class="col-12 text-center mb-3" style="font-size: 28pt;">
+                        <h1 style="font-weight: bold;">ACS Manager</h1>
+                    </div>
+                    @Html.AntiForgeryToken()
+                    @Html.HiddenFor(s => s.ReturnURL)
+
+                    <div class="col-12">
+                    @if (TempData["ErrorMSG"] != null)
+                    {
+                    <p class="error" align="center"> @TempData["ErrorMSG"] </p>
+                    }
+                    <div class="input-group mb-2">
+                        @Html.TextBoxFor(s => s.WindowsUserName, new { @placeholder = "Username", @class="form-control" })
+                    </div>
+                        <div class="input-group mb-3">
+                            @Html.PasswordFor(s => s.Password, new { @placeholder = "Password", @class="form-control" })
+                        </div>
+                    </div>
+                        <div class="col-12 mb-3">
+                            <button class="btn btn-primary">
+                                Sign in
+                            </button>
+                        </div>
+                </div>
+            </div>
+        }
+    </div>
+</body>
+</html>
